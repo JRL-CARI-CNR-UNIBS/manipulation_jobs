@@ -21,10 +21,12 @@
 
 ## State descriptions
 - `Init`: sleep
+
 - `Prepared`: open/close gripper
 - `Switch control`: change configuration to push
 - `Simple Touch`: touch the surface using parameters read from ROS Param `[PROPERTY_ID_NAME]`
 - `Return`: return in the initial position, if return_flag==True
+- `Error`: XXX
 
 ## Transition descriptions
 
