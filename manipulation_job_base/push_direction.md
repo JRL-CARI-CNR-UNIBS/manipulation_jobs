@@ -8,18 +8,22 @@
   - `goal_twist`: [linear_velocity, angular velocity] in `goal_twist_frame` to reach contact.
 
   - `target_wrench`: [force,torque] in `target_wrench_frame`
+  - `target_wrench_frame`: XXX
+  - `goal_twist_frame`: XXX
 
-  - `wrench_toll`: ....
-  - `wrench_deadband`: ....
-  - `target_wrench_frame`:
-  - `goal_twist_frame`:
+  - `wrench_toll`: XXX, if not specified use `default/wrench_toll`
+  - `wrench_deadband`: XXX, if not specified use `default/wrench_deadband`
 
+- `default`:
+  - `wrench_toll`: XXX
+
+  - `wrench_deadband`: XXX
 
 ## State descriptions
 - `Init`: sleep
 - `Prepared`: open/close gripper
 - `Switch control`: change configuration to push
-- `Simple Touch`: touch the surface using parameters read from ROS Param `[PROPERTY_ID_NAME]` 
+- `Simple Touch`: touch the surface using parameters read from ROS Param `[PROPERTY_ID_NAME]`
 - `Return`: return in the initial position, if return_flag==True
 
 ## Transition descriptions
