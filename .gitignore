@@ -1,0 +1,5 @@
+*~
+*.txt.user*
+*.kdev4
+*.autosave
+*matlab_msg_gen*
