@@ -10,7 +10,7 @@
 ## Transition descriptions
 
 From | To | Condition |
------------- | ------------- | |
+:------------ | :------------- | :------------ |
 Init | Prepared | pre_execution server callback |
 Prepared | Switch control | execution server callback |
 Switch control | Simple Touch | --- |
