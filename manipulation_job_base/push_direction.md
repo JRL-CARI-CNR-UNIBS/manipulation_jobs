@@ -5,6 +5,7 @@
 
 - `[PROPERTY_ID_NAME]`:
   - `return_flag`: if true return in initial position
+  
   - `goal_twist`: [linear_velocity, angular velocity] in `goal_twist_frame` to reach contact.
 
   - `target_wrench`: [force,torque] in `target_wrench_frame`
