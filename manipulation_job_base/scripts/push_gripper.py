@@ -6,6 +6,7 @@ import smach_ros
 import manipulation_msgs.srv
 import configuration_msgs.srv
 import simple_touch_controller_msgs.msg
+import cnr_cartesian_position_controller.msg
 import actionlib
 
 def main():
@@ -15,7 +16,8 @@ def main():
 
     config_client = rospy.ServiceProxy('/configuration_manager/start_configuration', configuration_msgs.srv.StartConfiguration)
     config_client.wait_for_service()
-    touch_client = actionlib.SimpleActionClient('/simple_touch', simple_touch_controller_msgs.msg.simpleTouchAction)
+    touch_client = actionlib.SimpleActionClient('/simple_touch', simple_touch_controller_msgs.msg.SimpleTouchAction)
+    move_client = actionlib.SimpleActionClient('/relative_move', cnr_cartesian_position_controller.msg.RelativeMoveAction)
 
     subjobs=rospy.get_param('subjobs_list')
     current_state_name=rospy.get_param('initial_state')
@@ -45,7 +47,7 @@ def main():
 
             touch_client.wait_for_server()
 
-            goal=simple_touch_controller_msgs.msg.simpleTouchGoal
+            goal=simple_touch_controller_msgs.msg.SimpleTouchGoal
             goal.goal_twist=current_state["goal_twist"]
             goal.goal_twist_frame=current_state["goal_twist_frame"]
             goal.target_force=current_state["target_force"]
@@ -64,6 +66,43 @@ def main():
             touch_client.wait_for_result()
             touch_result=touch_client.get_result()
             if (touch_result.error_code>=0):
+                current_state_name=current_state["next_state_if_success"]
+            else:
+                current_state_name=current_state["next_state_if_fail"]
+
+
+        if (current_state["type"]=='RelativeMove'):
+
+            rospy.loginfo(current_state_name+ " MOVE")
+            req=configuration_msgs.srv.StartConfigurationRequest()
+            req.strictness=req.BEST_EFFORT
+            req.start_configuration="cartesian_position"
+            try:
+                res=config_client(req)
+
+            except:
+                rospy.loginfo('no server')
+                current_state_name = "FAIL"
+                continue
+
+            move_client.wait_for_server()
+            
+            goal=cnr_cartesian_position_controller.msg.RelativeMoveGoal()
+            goal.relative_pose.header.frame_id=current_state["frame"]
+            goal.relative_pose.pose.position.x=current_state["position"][0]
+            goal.relative_pose.pose.position.y=current_state["position"][1]
+            goal.relative_pose.pose.position.z=current_state["position"][2]
+            goal.relative_pose.pose.orientation.x=current_state["orientation"][0]
+            goal.relative_pose.pose.orientation.y=current_state["orientation"][1]
+            goal.relative_pose.pose.orientation.z=current_state["orientation"][2]
+            goal.relative_pose.pose.orientation.w=current_state["orientation"][3]
+            
+            
+            rospy.loginfo(current_state_name+ " MOVE SEND GOAL")
+            move_client.send_goal(goal)
+            move_client.wait_for_result()
+            move_result=move_client.get_result()
+            if (move_result.error_code>=0):
                 current_state_name=current_state["next_state_if_success"]
             else:
                 current_state_name=current_state["next_state_if_fail"]
