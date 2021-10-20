@@ -18,6 +18,7 @@ def main():
     config_client.wait_for_service()
     touch_client = actionlib.SimpleActionClient('/simple_touch', simple_touch_controller_msgs.msg.SimpleTouchAction)
     move_client = actionlib.SimpleActionClient('/relative_move', cnr_cartesian_position_controller.msg.RelativeMoveAction)
+    gripper_client = rospy.ServiceProxy('/robotiq_gripper', manipulation_msgs.srv.JobExecution)
 
     subjobs=rospy.get_param('subjobs_list')
     current_state_name=rospy.get_param('initial_state')
@@ -71,6 +72,22 @@ def main():
                 current_state_name=current_state["next_state_if_fail"]
 
 
+        if (current_state["type"]=='Gripper'):
+
+            rospy.loginfo(current_state_name+ " Gripper")
+            req=manipulation_msgs.srv.JobExecutionRequest()
+            gripper_client.wait_for_service()
+            property_id="pos_"+str(current_state["position"])+"_force_"+str(current_state["force"])+"_vel_"+str(current_state["velocity"])
+            print(property_id)
+
+            req.property_id=property_id
+            rospy.loginfo(current_state_name+ " Gripper SEND GOAL")
+            res=gripper_client(req)
+            if (res.results>=0):
+                current_state_name=current_state["next_state_if_success"]
+            else:
+                current_state_name=current_state["next_state_if_fail"]
+
         if (current_state["type"]=='RelativeMove'):
 
             rospy.loginfo(current_state_name+ " MOVE")
@@ -86,7 +103,7 @@ def main():
                 continue
 
             move_client.wait_for_server()
-            
+
             goal=cnr_cartesian_position_controller.msg.RelativeMoveGoal()
             goal.relative_pose.header.frame_id=current_state["frame"]
             goal.relative_pose.pose.position.x=current_state["position"][0]
@@ -96,8 +113,8 @@ def main():
             goal.relative_pose.pose.orientation.y=current_state["orientation"][1]
             goal.relative_pose.pose.orientation.z=current_state["orientation"][2]
             goal.relative_pose.pose.orientation.w=current_state["orientation"][3]
-            
-            
+
+
             rospy.loginfo(current_state_name+ " MOVE SEND GOAL")
             move_client.send_goal(goal)
             move_client.wait_for_result()
