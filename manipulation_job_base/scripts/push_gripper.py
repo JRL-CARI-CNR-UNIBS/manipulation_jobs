@@ -113,6 +113,7 @@ def main():
             goal.relative_pose.pose.orientation.y=current_state["orientation"][1]
             goal.relative_pose.pose.orientation.z=current_state["orientation"][2]
             goal.relative_pose.pose.orientation.w=current_state["orientation"][3]
+            goal.target_velocity=current_state["velocity"]
 
 
             rospy.loginfo(current_state_name+ " MOVE SEND GOAL")
