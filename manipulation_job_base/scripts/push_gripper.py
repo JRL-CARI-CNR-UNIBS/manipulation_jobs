@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import rospy
 import smach
@@ -12,32 +12,32 @@ def main():
     rospy.init_node('test_push')
 
 
-    
+
     config_client = rospy.ServiceProxy('/configuration_manager/start_configuration', configuration_msgs.srv.StartConfiguration)
     config_client.wait_for_service()
     touch_client = actionlib.SimpleActionClient('/simple_touch', simple_touch_controller_msgs.msg.simpleTouchAction)
 
     subjobs=rospy.get_param('subjobs_list')
     current_state_name=rospy.get_param('initial_state')
-    
+
     while (not rospy.is_shutdown()):
         rospy.loginfo("Current state = "+current_state_name)
         if (current_state_name=="FAIL"):
             return 0
         if (current_state_name=="SUCCESS"):
             return 0
-        
+
         current_state=subjobs[current_state_name]
-        
+
         if (current_state["type"]=='Touch'):
-            
+
             rospy.loginfo(current_state_name+ " TOUCH")
             req=configuration_msgs.srv.StartConfigurationRequest()
             req.strictness=req.BEST_EFFORT
             req.start_configuration="simple_touch"
             try:
                 res=config_client(req)
-                
+
             except:
                 rospy.loginfo('no server')
                 current_state_name = "FAIL"
@@ -53,6 +53,12 @@ def main():
             if current_state["release_condition"]=="Force":
                 goal.release=current_state["release_force"]
                 goal.release_condition=simple_touch_controller_msgs.msg.simpleTouchGoal.FORCE
+            if current_state["release_condition"]=="None":
+                goal.release_condition=simple_touch_controller_msgs.msg.simpleTouchGoal.NONE
+            if current_state["release_condition"]=="Position":
+                goal.release=current_state["release_position"]
+                goal.release_condition=simple_touch_controller_msgs.msg.simpleTouchGoal.POSITION
+
             rospy.loginfo(current_state_name+ " TOUCH SEND GOAL")
             touch_client.send_goal(goal)
             touch_client.wait_for_result()
