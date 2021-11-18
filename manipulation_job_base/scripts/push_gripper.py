@@ -6,8 +6,10 @@ import smach_ros
 import manipulation_msgs.srv
 import configuration_msgs.srv
 import simple_touch_controller_msgs.msg
-import cnr_cartesian_position_controller.msg
+import relative_cartesian_controller_msgs.msg
 import actionlib
+import math
+import tf
 
 def main():
     rospy.init_node('test_push')
@@ -17,7 +19,7 @@ def main():
     config_client = rospy.ServiceProxy('/configuration_manager/start_configuration', configuration_msgs.srv.StartConfiguration)
     config_client.wait_for_service()
     touch_client = actionlib.SimpleActionClient('/simple_touch', simple_touch_controller_msgs.msg.SimpleTouchAction)
-    move_client = actionlib.SimpleActionClient('/relative_move', cnr_cartesian_position_controller.msg.RelativeMoveAction)
+    move_client = actionlib.SimpleActionClient('/relative_move', relative_cartesian_controller_msgs.msg.RelativeMoveAction)
     gripper_client = rospy.ServiceProxy('/robotiq_gripper', manipulation_msgs.srv.JobExecution)
 
     subjobs=rospy.get_param('subjobs_list')
@@ -77,7 +79,7 @@ def main():
             rospy.loginfo(current_state_name+ " Gripper")
             req=manipulation_msgs.srv.JobExecutionRequest()
             gripper_client.wait_for_service()
-            property_id="pos_"+str(current_state["position"])+"_force_"+str(current_state["force"])+"_vel_"+str(current_state["velocity"])
+            property_id="pos_"+str(position)+"_force_"+str(current_state["force"])+"_vel_"+str(current_state["velocity"])
             print(property_id)
 
             req.property_id=property_id
@@ -104,16 +106,57 @@ def main():
 
             move_client.wait_for_server()
 
-            goal=cnr_cartesian_position_controller.msg.RelativeMoveGoal()
+            goal=relative_cartesian_controller_msgs.msg.RelativeMoveGoal()
             goal.relative_pose.header.frame_id=current_state["frame"]
-            goal.relative_pose.pose.position.x=current_state["position"][0]
-            goal.relative_pose.pose.position.y=current_state["position"][1]
-            goal.relative_pose.pose.position.z=current_state["position"][2]
-            goal.relative_pose.pose.orientation.x=current_state["orientation"][0]
-            goal.relative_pose.pose.orientation.y=current_state["orientation"][1]
-            goal.relative_pose.pose.orientation.z=current_state["orientation"][2]
-            goal.relative_pose.pose.orientation.w=current_state["orientation"][3]
-            goal.target_velocity=current_state["velocity"]
+            if "rotZdeg" in current_state:
+                angle=current_state["rotZdeg"]*math.pi/180.0
+                orientation = tf.transformations.quaternion_from_euler(0, 0, angle)
+                position=[0.0,0.0,0.0]
+            elif "rotYdeg" in current_state:
+                angle=current_state["rotYdeg"]*math.pi/180.0
+                orientation = tf.transformations.quaternion_from_euler(0, angle,0)
+                position=[0.0,0.0,0.0]
+            elif "rotXdeg" in current_state:
+                angle=current_state["rotXdeg"]*math.pi/180.0
+                orientation = tf.transformations.quaternion_from_euler(angle, 0, 0)
+                position=[0.0,0.0,0.0]
+            elif "traXmm" in current_state:
+                tra=current_state["traXmm"]/1000.0
+                orientation = [0,0,0,1]
+                position=[tra,0.0,0.0]
+            elif "traYmm" in current_state:
+                tra=current_state["traYmm"]/1000.0
+                orientation = [0,0,0,1]
+                position=[0.0,tra,0.0]
+            elif "traZmm" in current_state:
+                tra=current_state["traZmm"]/1000.0
+                orientation = [0,0,0,1]
+                position=[0.0,0.0,tra]
+            else:
+                position=current_state["position"]
+                orientation=current_state["orientation"]
+            
+            goal.relative_pose.pose.position.x=position[0]
+            goal.relative_pose.pose.position.y=position[1]
+            goal.relative_pose.pose.position.z=position[2]
+            goal.relative_pose.pose.orientation.x=orientation[0]
+            goal.relative_pose.pose.orientation.y=orientation[1]
+            goal.relative_pose.pose.orientation.z=orientation[2]
+            goal.relative_pose.pose.orientation.w=orientation[3]
+            
+            if "linear_velocity_m_s" in current_state:
+                goal.target_linear_velocity=current_state["linear_velocity_m_s"]
+            elif "linear_velocity_mm_s" in current_state:
+                goal.target_linear_velocity=current_state["linear_velocity_mm_s"]/1000.0
+            else:
+                goal.target_linear_velocity=0.250
+                
+            if "angular_velocity_deg_s" in current_state:
+                goal.target_angular_velocity=current_state["angular_velocity_deg_s"]*math.pi/180.0
+            elif "angular_velocity_rad_s" in current_state:
+                goal.target_angular_velocity=current_state["angular_velocity_rad_s"]
+            else:
+                goal.target_angular_velocity=30.0*math.pi/180.0
 
 
             rospy.loginfo(current_state_name+ " MOVE SEND GOAL")
@@ -123,7 +166,10 @@ def main():
             if (move_result.error_code>=0):
                 current_state_name=current_state["next_state_if_success"]
             else:
-                current_state_name=current_state["next_state_if_fail"]
+                if "next_state_if_fail" in current_state:
+                    current_state_name=current_state["next_state_if_fail"]
+                else:
+                    current_state_name="FAIL"
 
     print(subjobs.keys())
 
