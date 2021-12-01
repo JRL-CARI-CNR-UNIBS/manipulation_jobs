@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+
+
+  <node pkg="manipulation_job_base" name="piece_a_job" type="push_gripper.py" output="screen">
+    <rosparam command="load" file="$(find manipulation_job_base)/config/test.yaml"/>
+  </node>
+
+
+</launch>
