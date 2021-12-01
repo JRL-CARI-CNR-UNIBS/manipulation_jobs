@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 
 import rospy
-#import smach
-#import smach_ros
+import actionlib
+import math
+import tf
 import manipulation_msgs.srv
 import configuration_msgs.srv
 import simple_touch_controller_msgs.msg
 import relative_cartesian_controller_msgs.msg
-import actionlib
-import math
-import tf
 
 
 class JobExecution:
@@ -30,40 +28,40 @@ class JobExecution:
         rospy.loginfo("[%s] job execution is ready", rospy.get_name())
     def preExecutionCb(self,req):
 
-        if not rospy.has_param(rospy.get_name()+'/pre_execution_subjobs_list'):
+        if not rospy.has_param(rospy.get_name()+"/"+req.property_id+'/pre_execution_subjobs_list'):
             res=manipulation_msgs.srv.JobExecutionResponse(manipulation_msgs.srv.JobExecutionResponse.PropertyIdNotFound)
             return res
 
-        subjobs=rospy.get_param(rospy.get_name()+'/pre_execution_subjobs_list')
+        subjobs=rospy.get_param(rospy.get_name()+"/"+req.property_id+'/pre_execution_subjobs_list')
 
-        if not rospy.has_param(rospy.get_name()+'/pre_execution_initial_state'):
+        if not rospy.has_param(rospy.get_name()+"/"+req.property_id+'/pre_execution_initial_state'):
             res=manipulation_msgs.srv.JobExecutionResponse(manipulation_msgs.srv.JobExecutionResponse.PropertyIdNotFound)
             return res
-        current_state_name=rospy.get_param(rospy.get_name()+'/pre_execution_initial_state')
+        current_state_name=rospy.get_param(rospy.get_name()+"/"+req.property_id+'/pre_execution_initial_state')
         return self.stateMachine(req,subjobs,current_state_name)
 
     def executionCb(self,req):
-        if not rospy.has_param(rospy.get_name()+'/subjobs_list'):
+        if not rospy.has_param(rospy.get_name()+"/"+req.property_id+'/subjobs_list'):
             res=manipulation_msgs.srv.JobExecutionResponse(manipulation_msgs.srv.JobExecutionResponse.PropertyIdNotFound)
             return res
-        subjobs=rospy.get_param(rospy.get_name()+'/subjobs_list')
+        subjobs=rospy.get_param(rospy.get_name()+"/"+req.property_id+'/subjobs_list')
 
-        if not rospy.has_param(rospy.get_name()+'/initial_state'):
+        if not rospy.has_param(rospy.get_name()+"/"+req.property_id+'/initial_state'):
             res=manipulation_msgs.srv.JobExecutionResponse(manipulation_msgs.srv.JobExecutionResponse.PropertyIdNotFound)
             return res
-        current_state_name=rospy.get_param(rospy.get_name()+'/initial_state')
+        current_state_name=rospy.get_param(rospy.get_name()+"/"+req.property_id+'/initial_state')
         return self.stateMachine(req,subjobs,current_state_name)
 
     def postExecutionCb(self,req):
-        if not rospy.has_param(rospy.get_name()+'/post_execution_subjobs_list'):
+        if not rospy.has_param(rospy.get_name()+"/"+req.property_id+'/post_execution_subjobs_list'):
             res=manipulation_msgs.srv.JobExecutionResponse(manipulation_msgs.srv.JobExecutionResponse.PropertyIdNotFound)
             return res
-        subjobs=rospy.get_param(rospy.get_name()+'/post_execution_subjobs_list')
+        subjobs=rospy.get_param(rospy.get_name()+"/"+req.property_id+'/post_execution_subjobs_list')
 
-        if not rospy.has_param(rospy.get_name()+'/post_execution_initial_state'):
+        if not rospy.has_param(rospy.get_name()+"/"+req.property_id+'/post_execution_initial_state'):
             res=manipulation_msgs.srv.JobExecutionResponse(manipulation_msgs.srv.JobExecutionResponse.PropertyIdNotFound)
             return res
-        current_state_name=rospy.get_param(rospy.get_name()+'/post_execution_initial_state')
+        current_state_name=rospy.get_param(rospy.get_name()+"/"+req.property_id+'/post_execution_initial_state')
         return self.stateMachine(req,subjobs,current_state_name)
 
     def stateMachine(self,req,subjobs,current_state_name):
