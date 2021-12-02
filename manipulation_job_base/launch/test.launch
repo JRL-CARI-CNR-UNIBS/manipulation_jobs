@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+
+
+  <node pkg="manipulation_job_base" name="ssm_job" type="ssm_job_exec.py" output="screen">
+    <rosparam command="load" ns="job1" file="$(find manipulation_job_base)/config/job1.yaml"/>
+    <rosparam command="load" ns="job2" file="$(find manipulation_job_base)/config/job2.yaml"/>
+  </node>
+
+
+</launch>

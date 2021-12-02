@@ -1,0 +1,34 @@
+subjobs_list:
+  rot_y:
+    next_state_if_success: "move_up"
+    next_state_if_fail: "FAIL"
+    type: RelativeMove
+    frame: table
+    rotYdeg: 10
+    angular_velocity_deg_s: 10
+  move_up:
+    next_state_if_success: "SUCCESS"
+    next_state_if_fail: "FAIL"
+    type: RelativeMove
+    frame: table
+    traYmm: 50
+    linear_velocity_mm_s: 200
+  push_z:
+      next_state_if_success: "push_z"
+      next_state_if_fail: "FAIL"
+      type: Touch
+      goal_twist: [0,0,-0.001,0,0,0]
+      goal_twist_frame: "world"
+      target_force: 15
+      relative_target: False
+      release_condition: "Position"
+      release_position: 0.0005
+  close_gripper:
+    next_state_if_success: "SUCCESS"
+    next_state_if_fail: "FAIL"
+    type: Gripper
+    position: 0
+    force: 100
+    velocity: 100
+
+initial_state: rot_y
