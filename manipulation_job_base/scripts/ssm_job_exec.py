@@ -7,7 +7,7 @@ import manipulation_msgs.srv
 import configuration_msgs.srv
 import simple_touch_controller_msgs.msg
 import relative_cartesian_controller_msgs.msg
-
+import math
 
 class JobExecution:
 
@@ -134,16 +134,17 @@ class JobExecution:
 
                 rospy.loginfo(current_state_name+ " Gripper")
                 req=manipulation_msgs.srv.JobExecutionRequest()
-                gripper_client.wait_for_service()
-                property_id="pos_"+str(position)+"_force_"+str(current_state["force"])+"_vel_"+str(current_state["velocity"])
+                self.gripper_client.wait_for_service()
+                property_id="pos_"+str(current_state["position"])+"_force_"+str(current_state["force"])+"_vel_"+str(current_state["velocity"])
                 print(property_id)
 
                 req.property_id=property_id
                 rospy.loginfo(current_state_name+ " Gripper SEND GOAL")
-                res=gripper_client(req)
+                res=self.gripper_client(req)
                 if (res.results>=0):
                     current_state_name=current_state["next_state_if_success"]
                 else:
+                    rospy.logwarn('[%s] unable to grasp',rospy.get_name())
                     current_state_name=current_state["next_state_if_fail"]
 
             if (current_state["type"]=='RelativeMove'):
