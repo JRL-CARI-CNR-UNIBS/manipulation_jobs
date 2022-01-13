@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<launch>
+
+
+<param name="test" value="$(find manipulation_job_base)/config/sismic.yaml"/>
+
+</launch>

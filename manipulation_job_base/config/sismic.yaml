@@ -1,0 +1,46 @@
+statechart:
+  name: statechart containing initialization code
+  preamble: |
+    x = 0
+    y = 0
+    init = False
+  root state:
+    name: root
+    transitions:
+    - target: s1
+      guard: not(init)
+      action: |
+        print('Start!')
+        init=True
+    states:
+    - name: s1
+      on entry: |
+        x += 1
+        print('Entry in s1!')
+      transitions:
+      - target: s1
+        guard: idle(1) and x < 10
+        action: print('stay in s1! x=',x)
+      - target: s2
+        guard: idle(1) and x >= 10
+        action: |
+          print('go to s2! x=',x)
+          y +=1
+    - name: s2
+      on entry: |
+        x -= 1
+        print('Entry in s2!')
+      transitions:
+      - target: done
+        guard: after(1) and y>5
+        action: print('done!')
+        priority: high
+      - target: s1
+        guard: after(1) and x < 5
+        action: print('go to in s1! x=',x)
+      - target: s2
+        guard: after(1) and x >= 5
+        action: print('stay to s2! x=',x)
+
+    - name: done
+      type: final
