@@ -98,20 +98,22 @@ class JobExecution:
 
                 self.touch_client.wait_for_server()
 
-                goal=simple_touch_controller_msgs.msg.SimpleTouchGoal
+                goal=simple_touch_controller_msgs.msg.SimpleTouchGoal()
+                print("goal ",goal)
+                print("current_state",current_state)
                 goal.goal_twist=current_state["goal_twist"]
                 goal.goal_twist_frame=current_state["goal_twist_frame"]
                 goal.target_force=current_state["target_force"]
                 goal.relative_target=current_state["relative_target"]
                 if current_state["release_condition"]=="Force":
                     goal.release=current_state["release_force"]
-                    goal.release_condition=simple_touch_controller_msgs.msg.simpleTouchGoal.FORCE
+                    goal.release_condition=goal.FORCE
                 if current_state["release_condition"]=="None":
-                    goal.release_condition=simple_touch_controller_msgs.msg.simpleTouchGoal.NONE
+                    goal.release_condition=goal.NONE
                     goal.release_condition=0.0
                 if current_state["release_condition"]=="Position":
                     goal.release=current_state["release_position"]
-                    goal.release_condition=simple_touch_controller_msgs.msg.simpleTouchGoal.POSITION
+                    goal.release_condition=goal.POSITION
 
                 rospy.loginfo(current_state_name+ " TOUCH SEND GOAL")
                 self.touch_client.send_goal(goal)
