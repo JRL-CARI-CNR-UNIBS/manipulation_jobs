@@ -8,6 +8,7 @@ import configuration_msgs.srv
 import simple_touch_controller_msgs.msg
 import relative_cartesian_controller_msgs.msg
 import math
+import object_loader_msgs.srv
 
 class JobExecution:
 
@@ -16,8 +17,18 @@ class JobExecution:
         self.config_client = rospy.ServiceProxy('/configuration_manager/start_configuration', configuration_msgs.srv.StartConfiguration)
         rospy.logdebug("[%s] waiting for service", rospy.get_name())
         self.config_client.wait_for_service()
+
         self.gripper_client = rospy.ServiceProxy('/robotiq_gripper', manipulation_msgs.srv.JobExecution)
         self.gripper_client.wait_for_service()
+
+        self.attach_client = rospy.ServiceProxy('/attach_object_to_link', object_loader_msgs.srv.AttachObject)
+        self.attach_client.wait_for_service()
+
+        self.detach_client = rospy.ServiceProxy('/detach_object_to_link', object_loader_msgs.srv.DetachObject)
+        self.detach_client.wait_for_service()
+
+        self.remote_obj_client = rospy.ServiceProxy('/remove_object_from_scene', object_loader_msgs.srv.RemoveObjects)
+        self.remote_obj_client.wait_for_service()
         rospy.logdebug("[%s] connected to services", rospy.get_name())
 
         self.job_ex_srv = rospy.Service(rospy.get_name()+'/pre_exec', manipulation_msgs.srv.JobExecution, self.preExecutionCb)
@@ -63,7 +74,8 @@ class JobExecution:
         current_state_name=rospy.get_param(rospy.get_name()+"/"+req.property_id+'/post_execution_initial_state')
         return self.stateMachine(req,subjobs,current_state_name)
 
-    def stateMachine(self,req,subjobs,current_state_name):
+    def stateMachine(self,job_req,subjobs,current_state_name):
+        print(job_req)
 
         self.touch_client = actionlib.SimpleActionClient('/simple_touch', simple_touch_controller_msgs.msg.SimpleTouchAction)
         self.move_client = actionlib.SimpleActionClient('/relative_move', relative_cartesian_controller_msgs.msg.RelativeMoveAction)
@@ -132,7 +144,7 @@ class JobExecution:
                     current_state_name = "FAIL"
                     continue
 
-            if (current_state["type"]=='Gripper'):
+            elif (current_state["type"]=='Gripper'):
 
                 rospy.loginfo(current_state_name+ " Gripper")
                 req=manipulation_msgs.srv.JobExecutionRequest()
@@ -149,7 +161,7 @@ class JobExecution:
                     rospy.logwarn('[%s] unable to grasp',rospy.get_name())
                     current_state_name=current_state["next_state_if_fail"]
 
-            if (current_state["type"]=='RelativeMove'):
+            elif (current_state["type"]=='RelativeMove'):
 
                 rospy.loginfo(current_state_name+ " MOVE")
                 req=configuration_msgs.srv.StartConfigurationRequest()
@@ -237,6 +249,70 @@ class JobExecution:
                     rospy.logerror('[%s] no configuration_manager server',rospy.get_name())
                     current_state_name = "FAIL"
                     continue
+
+            elif (current_state["type"]=='Attach'):
+
+                rospy.loginfo(current_state_name+ " Attach object %s to %s",job_req.object_id,job_req.tool_id)
+
+                req=object_loader_msgs.srv.AttachObjectRequest()
+                req.obj_id=job_req.object_id
+                req.link_name=job_req.tool_id
+                try:
+                    res=self.attach_client(req)
+                except:
+                    rospy.logerror('[%s] no attach_object_to_link server',rospy.get_name())
+                    current_state_name = "FAIL"
+                    continue
+
+                if (res.success):
+                    current_state_name=current_state["next_state_if_success"]
+                else:
+                    if "next_state_if_fail" in current_state:
+                        current_state_name=current_state["next_state_if_fail"]
+                    else:
+                        current_state_name="FAIL"
+
+            elif (current_state["type"]=='Detach'):
+
+                rospy.loginfo(current_state_name+ " Detach object %s",job_req.object_id)
+
+                req=object_loader_msgs.srv.DetachObjectRequest()
+                req.obj_id=job_req.object_id
+                try:
+                    res=self.detach_client(req)
+                except:
+                    rospy.logerror('[%s] no detach_object_to_link server',rospy.get_name())
+                    current_state_name = "FAIL"
+                    continue
+
+                if (res.success):
+                    current_state_name=current_state["next_state_if_success"]
+                else:
+                    if "next_state_if_fail" in current_state:
+                        current_state_name=current_state["next_state_if_fail"]
+                    else:
+                        current_state_name="FAIL"
+
+            elif (current_state["type"]=='RemoveObject'):
+
+                rospy.loginfo(current_state_name+ " Remove object %s",job_req.object_id)
+
+                req=object_loader_msgs.srv.RemoveObjectsRequest()
+                req.obj_ids.append(job_req.object_id)
+                try:
+                    res=self.remote_obj_client(req)
+                except:
+                    rospy.logerror('[%s] no /remove_object_from_scene server',rospy.get_name())
+                    current_state_name = "FAIL"
+                    continue
+                print("sucess")
+                if (res.success):
+                    current_state_name=current_state["next_state_if_success"]
+                else:
+                    if "next_state_if_fail" in current_state:
+                        current_state_name=current_state["next_state_if_fail"]
+                    else:
+                        current_state_name="FAIL"
 
         print(subjobs.keys())
 
