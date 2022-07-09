@@ -10,6 +10,9 @@ import relative_cartesian_controller_msgs.msg
 import math
 import object_loader_msgs.srv
 
+import ur_dashboard_msgs.srv
+
+
 class JobExecution:
 
     def __init__(self):
@@ -20,6 +23,9 @@ class JobExecution:
 
         self.gripper_client = rospy.ServiceProxy('/robotiq_gripper', manipulation_msgs.srv.JobExecution)
         self.gripper_client.wait_for_service()
+
+        self.script_server = rospy.ServiceProxy('/linear_guide/go', ur_dashboard_msgs.srv.Load)
+        self.script_server.wait_for_service()
 
         self.attach_client = rospy.ServiceProxy('/attach_object_to_link', object_loader_msgs.srv.AttachObject)
         self.attach_client.wait_for_service()
@@ -94,6 +100,39 @@ class JobExecution:
                 rospy.logerror('[%s] state %s is undefined',rospy.get_name(),current_state_name)
                 res=manipulation_msgs.srv.JobExecutionResponse(manipulation_msgs.srv.JobExecutionResponse.HwError)
                 return res
+
+            if (current_state["type"]=='Script'):
+                rospy.loginfo(current_state_name+ " SCRIPT")
+                req=configuration_msgs.srv.StartConfigurationRequest()
+                req.strictness=req.BEST_EFFORT
+                req.start_configuration="watch"
+                try:
+                    res=self.config_client(req)
+                except:
+                    rospy.logerror('[%s] no configuration_manager server',rospy.get_name())
+                    current_state_name = "FAIL"
+                    continue
+
+                self.script_server.wait_for_server()
+
+                script_req=ur_dashboard_msgs.srv.Load()
+                script_req.filename=current_state["name"]
+                rospy.loginfo(current_state_name+ " Script SEND GOAL: ",script_req.filename)
+                script_res=self.script_server(script_req)
+
+                if (not script_res.success): 
+                    rospy.logerror('[%s] no configuration_manager server',rospy.get_name())
+                    current_state_name = "FAIL"
+                    continue
+
+
+                req.start_configuration="trajectory_tracking"
+                try:
+                    res=self.config_client(req)
+                except:
+                    rospy.logerror('[%s] no configuration_manager server',rospy.get_name())
+                    current_state_name = "FAIL"
+                    continue
 
             if (current_state["type"]=='Touch'):
 
