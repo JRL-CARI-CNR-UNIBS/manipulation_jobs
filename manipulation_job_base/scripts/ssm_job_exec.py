@@ -113,18 +113,19 @@ class JobExecution:
                     current_state_name = "FAIL"
                     continue
 
-                self.script_server.wait_for_server()
+                self.script_server.wait_for_service()
 
                 script_req=ur_dashboard_msgs.srv.Load()
                 script_req.filename=current_state["name"]
-                rospy.loginfo(current_state_name+ " Script SEND GOAL: ",script_req.filename)
-                script_res=self.script_server(script_req)
+                rospy.loginfo(current_state_name+ " Script SEND GOAL: "+script_req.filename)
+                script_res=self.script_server(script_req.filename)
 
-                if (not script_res.success): 
+                print(script_res)
+                if (not script_res.success):
                     rospy.logerror('[%s] no configuration_manager server',rospy.get_name())
-                    current_state_name = "FAIL"
-                    continue
-
+                    current_state_name = current_state["next_state_if_fail"]
+                else:
+                    current_state_name=current_state["next_state_if_success"]
 
                 req.start_configuration="trajectory_tracking"
                 try:
