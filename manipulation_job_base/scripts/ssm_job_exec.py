@@ -11,7 +11,7 @@ import math
 import object_loader_msgs.srv
 
 import ur_dashboard_msgs.srv
-
+from ur_msgs.msg
 
 class JobExecution:
 
@@ -26,6 +26,9 @@ class JobExecution:
 
         self.script_server = rospy.ServiceProxy('/linear_guide/go', ur_dashboard_msgs.srv.Load)
         self.script_server.wait_for_service()
+
+        self.set_io_server = rospy.ServiceProxy('/ut10e_hw/set_io'', ur_msgs.srv.SetIO)
+        self.set_io_server.wait_for_service()
 
         self.attach_client = rospy.ServiceProxy('/attach_object_to_link', object_loader_msgs.srv.AttachObject)
         self.attach_client.wait_for_service()
@@ -134,6 +137,34 @@ class JobExecution:
                     rospy.logerror('[%s] no configuration_manager server',rospy.get_name())
                     current_state_name = "FAIL"
                     continue
+
+            if (current_state["type"]=='SetIO'):
+                print("DOSOMETHING")
+                self.set_io_server.wait_for_service()
+                set_io_req=ur_msgs.srv.SetIO()
+                if (current_state["output"]=="Digital"):
+                    set_io_req.fun=1
+                else if (current_state["output"]=="Flag"):
+                    set_io_req.fun=2
+                else if (current_state["output"]=="Analog"):
+                    set_io_req.fun=3
+                else if (current_state["output"]=="ToolVoltage"):
+                    set_io_req.fun=4
+                else:
+                    rospy.logerror('[%s] undefined io type. Valid options are Digital, Flag, Analaog, ToolVoltage',rospy.get_name())
+
+                set_io_req.pin=current_state["pin"]
+                set_io_req.state=current_state["state"]
+
+                rospy.loginfo(current_state_name+ " Set IO: fun: "+set_io_req.fun+", pin: "+set_io_req.pin+", state: "+set_io_req.state)
+                set_io_res=self.set_io_server(set_io_req)
+
+                print(set_io_res)
+                if (not set_io_res.success):
+                    rospy.logerror('[%s] set io UR failed',rospy.get_name())
+                    current_state_name = current_state["next_state_if_fail"]
+                else:
+                    current_state_name=current_state["next_state_if_success"]
 
             if (current_state["type"]=='Touch'):
 
