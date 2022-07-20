@@ -11,7 +11,7 @@ import math
 import object_loader_msgs.srv
 
 import ur_dashboard_msgs.srv
-from ur_msgs.msg
+import ur_msgs.srv
 
 class JobExecution:
 
@@ -21,14 +21,24 @@ class JobExecution:
         rospy.logdebug("[%s] waiting for service", rospy.get_name())
         self.config_client.wait_for_service()
 
+        print("config service ok")
+
         self.gripper_client = rospy.ServiceProxy('/robotiq_gripper', manipulation_msgs.srv.JobExecution)
         self.gripper_client.wait_for_service()
+
+        print("gripper service ok")
 
         self.script_server = rospy.ServiceProxy('/linear_guide/go', ur_dashboard_msgs.srv.Load)
         self.script_server.wait_for_service()
 
-        self.set_io_server = rospy.ServiceProxy('/ut10e_hw/set_io'', ur_msgs.srv.SetIO)
+        print("linear_guide service ok")
+
+
+        self.set_io_server = rospy.ServiceProxy('/ur10e_hw/set_io', ur_msgs.srv.SetIO)
         self.set_io_server.wait_for_service()
+
+        print("set_io service ok")
+
 
         self.attach_client = rospy.ServiceProxy('/attach_object_to_link', object_loader_msgs.srv.AttachObject)
         self.attach_client.wait_for_service()
@@ -139,16 +149,15 @@ class JobExecution:
                     continue
 
             if (current_state["type"]=='SetIO'):
-                print("DOSOMETHING")
                 self.set_io_server.wait_for_service()
                 set_io_req=ur_msgs.srv.SetIO()
                 if (current_state["output"]=="Digital"):
                     set_io_req.fun=1
-                else if (current_state["output"]=="Flag"):
+                elif (current_state["output"]=="Flag"):
                     set_io_req.fun=2
-                else if (current_state["output"]=="Analog"):
+                elif (current_state["output"]=="Analog"):
                     set_io_req.fun=3
-                else if (current_state["output"]=="ToolVoltage"):
+                elif (current_state["output"]=="ToolVoltage"):
                     set_io_req.fun=4
                 else:
                     rospy.logerror('[%s] undefined io type. Valid options are Digital, Flag, Analaog, ToolVoltage',rospy.get_name())
@@ -156,8 +165,8 @@ class JobExecution:
                 set_io_req.pin=current_state["pin"]
                 set_io_req.state=current_state["state"]
 
-                rospy.loginfo(current_state_name+ " Set IO: fun: "+set_io_req.fun+", pin: "+set_io_req.pin+", state: "+set_io_req.state)
-                set_io_res=self.set_io_server(set_io_req)
+                rospy.loginfo(current_state_name+ " Set IO: fun: "+str(set_io_req.fun)+", pin: "+str(set_io_req.pin)+", state: "+str(set_io_req.state))
+                set_io_res=self.set_io_server(set_io_req.fun, set_io_req.pin, set_io_req.state)
 
                 print(set_io_res)
                 if (not set_io_res.success):
